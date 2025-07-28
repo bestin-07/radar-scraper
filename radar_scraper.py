@@ -334,16 +334,16 @@ def generate_forward_timestamps_from_latest(current_time,
     long_base = pattern_info.get('long_base', 761)
     print(f"🎯 Adaptive intervals: {short_base}s, {long_base}s")
 
-    # Determine direction based on one-hour window
-    one_hour_ago = current_total_sec - 3600
-    one_hour_ahead = current_total_sec + 3600
+    # Determine direction based on two-hour window
+    two_hours_ago = current_total_sec - 7200  # 2 hours = 7200 seconds
+    two_hours_ahead = current_total_sec + 7200
 
     # Decide if we need forward, backward, or both
-    if ref_total_sec < one_hour_ago:
+    if ref_total_sec < two_hours_ago:
         # Reference is too old, generate forward
         print("⏩ Generating forward from reference (reference is old)")
         direction = "forward"
-    elif ref_total_sec > one_hour_ahead:
+    elif ref_total_sec > two_hours_ahead:
         # Reference is too new, generate backward
         print("⏪ Generating backward from reference (reference is ahead)")
         direction = "backward"
@@ -361,7 +361,7 @@ def generate_forward_timestamps_from_latest(current_time,
         use_short = True
         iteration = 0
 
-        while current_check_sec <= one_hour_ahead and iteration < 50:
+        while current_check_sec <= two_hours_ahead and iteration < 50:
             # Calculate next interval
             if use_short:
                 if include_variants and pattern_info.get('short_variants'):
@@ -397,7 +397,7 @@ def generate_forward_timestamps_from_latest(current_time,
         use_short = True
         iteration = 0
 
-        while current_check_sec >= one_hour_ago and iteration < 50:
+        while current_check_sec >= two_hours_ago and iteration < 50:
             # Calculate previous interval
             if use_short:
                 if include_variants and pattern_info.get('short_variants'):
@@ -427,7 +427,7 @@ def generate_forward_timestamps_from_latest(current_time,
             timestamp = f"{h:02d}{m:02d}{s:02d}"
             timestamps.append(timestamp)
 
-    # Filter for one-hour window around current time
+    # Filter for two-hour window around current time
     filtered_timestamps = []
     for ts in timestamps:
         ts_h = int(ts[:2])
@@ -435,8 +435,8 @@ def generate_forward_timestamps_from_latest(current_time,
         ts_s = int(ts[4:6])
         ts_total_sec = ts_h * 3600 + ts_m * 60 + ts_s
 
-        # Include if it's within one hour window
-        if one_hour_ago <= ts_total_sec <= one_hour_ahead:
+        # Include if it's within two hour window
+        if two_hours_ago <= ts_total_sec <= two_hours_ahead:
             filtered_timestamps.append(ts)
 
     # Remove duplicates and sort
@@ -665,18 +665,21 @@ if __name__ == "__main__":
         print("🔬 Running MOSDAC Hourly Analysis...")
         print("📅 Using 13:23:22 reference with flexible ±20s matching...")
         print("🕐 Smart pattern generation with timing variants")
-        print("📊 Checking entire last hour of data")
+        print("📊 Checking entire last two hours of data")
 
         current_time = datetime.now(UTC)  # Use UTC time explicitly
 
-        # Check entire last hour: both previous hour and current hour
-        # This ensures we get complete coverage for the last 60 minutes
-        previous_hour = current_time.hour - 1 if current_time.hour > 0 else 23
-        target_hours = [previous_hour, current_time.hour]  # Check both hours
+        # Check entire last two hours: current hour + previous 2 hours
+        # This ensures we get complete coverage for the last 120 minutes
+        current_hour = current_time.hour
+        previous_hour = current_hour - 1 if current_hour > 0 else 23
+        two_hours_ago = (current_hour - 2 if current_hour >= 2
+                         else (24 + current_hour - 2))
+        target_hours = [two_hours_ago, previous_hour, current_hour]
 
         print(f"🕐 Current UTC time: {current_time.strftime('%H:%M')} UTC")
-        print(f"🎯 Target: {previous_hour:02d}:xx and "
-              f"{current_time.hour:02d}:xx UTC (last hour coverage)")
+        print(f"🎯 Target: {two_hours_ago:02d}:xx, {previous_hour:02d}:xx and "
+              f"{current_hour:02d}:xx UTC (last two hours coverage)")
 
         # Use smart pattern scanning with flexibility for both hours
         quick_scan_results = smart_pattern_scan(current_time, target_hours,
