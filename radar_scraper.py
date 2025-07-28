@@ -180,7 +180,7 @@ def load_known_timestamps():
                         data.get("last_reference", "152541"))
         except Exception:
             pass
-    
+
     # Default known timestamps from previous discoveries
     default_timestamps = [
         "151023", "151300", "152541"  # Known valid data points
@@ -212,21 +212,21 @@ def calculate_intervals_from_known(known_timestamps):
             'short_variants': [158, 157, 159],
             'long_variants': [761, 744, 778]
         }
-    
+
     # Convert timestamps to seconds
     timestamps_sec = []
     for ts in sorted(known_timestamps):
         h, m, s = int(ts[:2]), int(ts[2:4]), int(ts[4:6])
         total_sec = h * 3600 + m * 60 + s
         timestamps_sec.append(total_sec)
-    
+
     # Calculate intervals between consecutive timestamps
     intervals = []
     for i in range(1, len(timestamps_sec)):
         interval = timestamps_sec[i] - timestamps_sec[i-1]
         if interval > 0:  # Only positive intervals
             intervals.append(interval)
-    
+
     if not intervals:
         # Fallback to defaults
         return {
@@ -234,11 +234,11 @@ def calculate_intervals_from_known(known_timestamps):
             'short_variants': [158, 157, 159],
             'long_variants': [761, 744, 778]
         }
-    
+
     # Categorize intervals
     short_intervals = [i for i in intervals if i < 400]  # < ~6.5 minutes
     long_intervals = [i for i in intervals if i >= 400]  # >= ~6.5 minutes
-    
+
     # Get most common intervals with variants
     def get_variants(interval_list, base_interval):
         variants = []
@@ -246,13 +246,13 @@ def calculate_intervals_from_known(known_timestamps):
             if abs(interval - base_interval) <= 20:  # Within 20 seconds
                 variants.append(interval)
         return sorted(list(set(variants))) if variants else [base_interval]
-    
+
     # Use most common intervals as base
     short_base = (max(set(short_intervals), key=short_intervals.count)
                   if short_intervals else 158)
     long_base = (max(set(long_intervals), key=long_intervals.count)
                  if long_intervals else 761)
-    
+
     return {
         'intervals': intervals,
         'short_base': short_base,
@@ -308,7 +308,7 @@ def generate_forward_timestamps_from_latest(current_time,
             known_timestamps = loaded_timestamps
         if reference_timestamp is None:
             reference_timestamp = loaded_reference
-    
+
     # Parse reference timestamp
     ref_h = int(reference_timestamp[:2])
     ref_m = int(reference_timestamp[2:4])
@@ -327,7 +327,7 @@ def generate_forward_timestamps_from_latest(current_time,
     print(f"🕐 Current time: {current_time.hour:02d}:{current_time.minute:02d}:"
           f"{current_time.second:02d}")
     print(f"📊 Known valid timestamps: {len(known_timestamps)}")
-    
+
     # Calculate adaptive intervals from known data
     pattern_info = calculate_intervals_from_known(known_timestamps)
     short_base = pattern_info.get('short_base', 158)
@@ -337,7 +337,7 @@ def generate_forward_timestamps_from_latest(current_time,
     # Determine direction based on one-hour window
     one_hour_ago = current_total_sec - 3600
     one_hour_ahead = current_total_sec + 3600
-    
+
     # Decide if we need forward, backward, or both
     if ref_total_sec < one_hour_ago:
         # Reference is too old, generate forward
@@ -353,14 +353,14 @@ def generate_forward_timestamps_from_latest(current_time,
         direction = "both"
 
     timestamps = [reference_timestamp]  # Start with the reference
-    
+
     # Generate timestamps based on direction
     if direction in ["forward", "both"]:
         # Generate forward
         current_check_sec = ref_total_sec
         use_short = True
         iteration = 0
-        
+
         while current_check_sec <= one_hour_ahead and iteration < 50:
             # Calculate next interval
             if use_short:
@@ -396,7 +396,7 @@ def generate_forward_timestamps_from_latest(current_time,
         current_check_sec = ref_total_sec
         use_short = True
         iteration = 0
-        
+
         while current_check_sec >= one_hour_ago and iteration < 50:
             # Calculate previous interval
             if use_short:
@@ -557,7 +557,7 @@ def smart_pattern_scan(current_time, target_hours, use_flexibility=True):
 
             if success:
                 consecutive_not_found = 0  # Reset counter on success
-                
+
                 if actual_timestamp == timestamp:
                     print("✅ Available (exact)")
                 else:
@@ -579,7 +579,7 @@ def smart_pattern_scan(current_time, target_hours, use_flexibility=True):
             else:
                 consecutive_not_found += 1
                 print("❌ Not found")
-                
+
                 # Early exit if too many consecutive failures
                 if consecutive_not_found >= max_consecutive_failures:
                     remaining = len(target_timestamps) - i
@@ -608,7 +608,7 @@ def smart_pattern_scan(current_time, target_hours, use_flexibility=True):
                 else:
                     consecutive_not_found += 1
                     print(f"❌ {r.status_code}")
-                    
+
                     # Early exit check for exact matching too
                     if consecutive_not_found >= max_consecutive_failures:
                         remaining = len(target_timestamps) - i
@@ -619,7 +619,7 @@ def smart_pattern_scan(current_time, target_hours, use_flexibility=True):
             except Exception:
                 consecutive_not_found += 1
                 print("❌ Error")
-                
+
                 # Early exit check for exceptions too
                 if consecutive_not_found >= max_consecutive_failures:
                     remaining = len(target_timestamps) - i

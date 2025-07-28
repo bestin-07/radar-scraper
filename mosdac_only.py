@@ -45,7 +45,7 @@ def load_known_timestamps():
                         data.get("last_reference", "152541"))
         except Exception:
             pass
-    
+
     # Default known timestamps from previous discoveries
     default_timestamps = [
         "151023", "151300", "152541"  # Known valid data points
@@ -77,21 +77,21 @@ def calculate_intervals_from_known(known_timestamps):
             'short_variants': [158, 157, 159],
             'long_variants': [761, 744, 778]
         }
-    
+
     # Convert timestamps to seconds
     timestamps_sec = []
     for ts in sorted(known_timestamps):
         h, m, s = int(ts[:2]), int(ts[2:4]), int(ts[4:6])
         total_sec = h * 3600 + m * 60 + s
         timestamps_sec.append(total_sec)
-    
+
     # Calculate intervals between consecutive timestamps
     intervals = []
     for i in range(1, len(timestamps_sec)):
         interval = timestamps_sec[i] - timestamps_sec[i-1]
         if interval > 0:  # Only positive intervals
             intervals.append(interval)
-    
+
     if not intervals:
         # Fallback to defaults
         return {
@@ -99,11 +99,11 @@ def calculate_intervals_from_known(known_timestamps):
             'short_variants': [158, 157, 159],
             'long_variants': [761, 744, 778]
         }
-    
+
     # Categorize intervals
     short_intervals = [i for i in intervals if i < 400]  # < ~6.5 minutes
     long_intervals = [i for i in intervals if i >= 400]  # >= ~6.5 minutes
-    
+
     # Get most common intervals with variants
     def get_variants(interval_list, base_interval):
         variants = []
@@ -111,13 +111,13 @@ def calculate_intervals_from_known(known_timestamps):
             if abs(interval - base_interval) <= 20:  # Within 20 seconds
                 variants.append(interval)
         return sorted(list(set(variants))) if variants else [base_interval]
-    
+
     # Use most common intervals as base
     short_base = (max(set(short_intervals), key=short_intervals.count)
                   if short_intervals else 158)
     long_base = (max(set(long_intervals), key=long_intervals.count)
                  if long_intervals else 761)
-    
+
     return {
         'intervals': intervals,
         'short_base': short_base,
@@ -148,7 +148,7 @@ def generate_forward_timestamps_from_latest(current_time,
     # Load known timestamps and reference
     if known_timestamps is None or reference_timestamp is None:
         known_timestamps, reference_timestamp = load_known_timestamps()
-    
+
     # Parse reference timestamp
     ref_h = int(reference_timestamp[:2])
     ref_m = int(reference_timestamp[2:4])
@@ -167,7 +167,7 @@ def generate_forward_timestamps_from_latest(current_time,
     print(f"🕐 Current time: {current_time.hour:02d}:{current_time.minute:02d}:"
           f"{current_time.second:02d}")
     print(f"📊 Known valid timestamps: {len(known_timestamps)}")
-    
+
     # Calculate adaptive intervals from known data
     pattern_info = calculate_intervals_from_known(known_timestamps)
     short_base = pattern_info.get('short_base', 158)
@@ -177,7 +177,7 @@ def generate_forward_timestamps_from_latest(current_time,
     # Determine direction based on one-hour window
     one_hour_ago = current_total_sec - 3600
     one_hour_ahead = current_total_sec + 3600
-    
+
     # Decide if we need forward, backward, or both
     if ref_total_sec < one_hour_ago:
         # Reference is too old, generate forward
@@ -193,14 +193,14 @@ def generate_forward_timestamps_from_latest(current_time,
         direction = "both"
 
     timestamps = [reference_timestamp]  # Start with the reference
-    
+
     # Generate timestamps based on direction
     if direction in ["forward", "both"]:
         # Generate forward
         current_check_sec = ref_total_sec
         use_short = True
         iteration = 0
-        
+
         while current_check_sec <= one_hour_ahead and iteration < 50:
             # Calculate next interval
             if use_short:
@@ -236,7 +236,7 @@ def generate_forward_timestamps_from_latest(current_time,
         current_check_sec = ref_total_sec
         use_short = True
         iteration = 0
-        
+
         while current_check_sec >= one_hour_ago and iteration < 50:
             # Calculate previous interval
             if use_short:
@@ -362,7 +362,7 @@ def download_mosdac_only():
     # Load existing known timestamps and reference
     known_timestamps, reference_timestamp = load_known_timestamps()
     print(f"📊 Starting with {len(known_timestamps)} known valid timestamps")
-    
+
     # Generate timestamps
     print("🔍 Generating adaptive timestamps...")
     all_timestamps = generate_forward_timestamps_from_latest(
@@ -398,7 +398,7 @@ def download_mosdac_only():
 
         if success:
             consecutive_not_found = 0  # Reset counter on success
-            
+
             if actual_timestamp == timestamp:
                 print("✅ Available (exact)")
             else:
@@ -413,18 +413,18 @@ def download_mosdac_only():
             if actual_timestamp not in new_valid_timestamps:
                 new_valid_timestamps.append(actual_timestamp)
                 print("    🆕 New timestamp added to known list")
-            
+
             # Update latest found timestamp
             actual_h = int(actual_timestamp[:2])
             actual_m = int(actual_timestamp[2:4])
             actual_s = int(actual_timestamp[4:6])
             actual_total_sec = actual_h * 3600 + actual_m * 60 + actual_s
-            
+
             latest_h = int(latest_found_timestamp[:2])
             latest_m = int(latest_found_timestamp[2:4])
             latest_s = int(latest_found_timestamp[4:6])
             latest_total_sec = latest_h * 3600 + latest_m * 60 + latest_s
-            
+
             if actual_total_sec > latest_total_sec:
                 old_ref = latest_found_timestamp
                 latest_found_timestamp = actual_timestamp
@@ -449,14 +449,14 @@ def download_mosdac_only():
         else:
             consecutive_not_found += 1
             print("❌ Not found")
-            
+
             # Early exit if too many consecutive failures
             if consecutive_not_found >= max_consecutive_failures:
                 remaining = len(target_timestamps) - i
                 print(f"\n⚠️  Early exit: {consecutive_not_found} consecutive "
                       f"failures detected")
                 print(f"   Skipping {remaining} remaining timestamps")
-                
+
                 # If no data found, adjust reference to most recent known
                 if found_count == 0 and new_valid_timestamps:
                     # Find most recent known timestamp within reasonable time
@@ -465,28 +465,28 @@ def download_mosdac_only():
                         current_time.minute * 60 +
                         current_time.second
                     )
-                    
+
                     # Sort known timestamps and find the most recent one
                     # that's not too far in the future
                     best_reference = None
                     best_distance = float('inf')
-                    
+
                     for known_ts in new_valid_timestamps:
                         known_h = int(known_ts[:2])
                         known_m = int(known_ts[2:4])
                         known_s = int(known_ts[4:6])
                         known_sec = known_h * 3600 + known_m * 60 + known_s
-                        
+
                         # Calculate distance (prefer past timestamps)
                         distance = abs(current_total_sec - known_sec)
-                        
+
                         # Prefer timestamps in past but not too old
                         if (known_sec <= current_total_sec and
                                 distance < best_distance and
                                 distance <= 7200):  # Within 2 hours
                             best_distance = distance
                             best_reference = known_ts
-                    
+
                     ref_changed = (best_reference and
                                    best_reference != reference_timestamp)
                     if ref_changed:
@@ -500,13 +500,13 @@ def download_mosdac_only():
                         print(f"   📍 Adjusting reference to known point: "
                               f"{old_time} → {new_time}")
                         print("   💡 This will improve next run's predictions")
-                
+
                 break
 
     # Save updated known timestamps and reference
     timestamps_changed = new_valid_timestamps != known_timestamps
     reference_changed = latest_found_timestamp != reference_timestamp
-    
+
     if timestamps_changed or reference_changed:
         save_known_timestamps(new_valid_timestamps, latest_found_timestamp)
         added_count = len(new_valid_timestamps) - len(known_timestamps)
