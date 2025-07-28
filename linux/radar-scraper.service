@@ -1,0 +1,31 @@
+[Unit]
+Description=Kerala Radar Scraper Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=radar
+Group=radar
+WorkingDirectory=/opt/radar-scraper
+Environment=PATH=/opt/radar-scraper/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/radar-scraper/venv/bin/python /opt/radar-scraper/radar_scraper.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=radar-scraper
+
+# Restart policy
+Restart=no
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/radar-scraper/radar_images /opt/radar-scraper/known_timestamps.json
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

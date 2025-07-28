@@ -1,6 +1,14 @@
 # Kerala Radar Data Collection System
 
-A comprehensive Python-based system for automated meteorological radar data collection and analysis from Kerala weather monitoring stations.
+A comprehensive P## 📚 Documentation
+
+### Main Documentation
+- **README.md** - This file: Main system overview and usage guide
+
+### Detailed Documentation (in [`info/`](info/) folder)
+- **[Linux Setup Guide](info/LINUX_SETUP.md)** - Complete Linux installation and configuration
+- **[Linux Deployment Guide](info/LINUX_DEPLOYMENT.md)** - Production server deployment instructions
+- **[Linux README](info/LINUX_README.md)** - Linux-specific documentation and scriptssystem for automated meteorological radar data collection and analysis from Kerala weather monitoring stations.
 
 ## 🎯 Overview
 
@@ -56,7 +64,20 @@ python radar_analyzer.py
 ```
 *Analyzes collected data and provides insights*
 
-## 📁 Directory Structure
+## � Documentation
+
+### Main Documentation
+- **README.md** - This file: Main system overview and usage guide
+
+### Detailed Documentation (in [`info/`](info/) folder)
+- **[Linux Setup Guide](info/LINUX_SETUP.md)** - Complete Linux installation and configuration
+- **[Linux Deployment Guide](info/LINUX_DEPLOYMENT.md)** - Production server deployment instructions
+- **[Linux README](info/LINUX_README.md)** - Linux-specific documentation and scripts
+- **[MOSDAC Configuration](info/MOSDAC_DISABLED.md)** - MOSDAC system changes and usage options
+- **[Code Organization](info/ORGANIZATION_SUMMARY.md)** - Project structure and refactoring details
+- **[Merge Summary](info/MERGE_SUMMARY.md)** - Code consolidation and cleanup history
+
+## �📁 Directory Structure
 
 ```
 Kerala SCRAPER/
@@ -69,9 +90,19 @@ Kerala SCRAPER/
 │   ├── vp2/                 # VP2 radar files
 │   ├── 3ds/                 # 3DS radar files
 │   └── kochi/               # MOSDAC historical data
-├── radar_scraper.py         # Main collection engine
+├── info/                    # Documentation files
+│   ├── LINUX_SETUP.md      # Linux installation guide
+│   ├── LINUX_DEPLOYMENT.md # Production deployment
+│   └── LINUX_README.md     # Linux-specific docs
+├── linux/                  # Linux deployment files
+│   ├── setup_linux.sh      # Development setup
+│   ├── deploy_linux.sh     # Production deployment
+│   ├── run_radar_linux.sh  # Convenience runner
+│   └── *.service, *.timer  # Systemd files
+├── radar_scraper.py         # Main collection engine (refactored)
 ├── radar_scheduler.py       # Automation scheduler
 ├── radar_analyzer.py        # Data analysis tools
+├── mosdac_only.py          # MOSDAC functions module
 ├── requirements.txt         # Python dependencies
 └── README.md               # This documentation
 ```
@@ -92,6 +123,33 @@ pip install -r requirements.txt
 ```bash
 pip install requests>=2.32.0 schedule>=1.2.0
 ```
+
+### 🐧 Linux Deployment
+
+For Linux servers, use the automated deployment scripts in the `linux/` folder:
+
+#### Development Setup
+```bash
+chmod +x linux/setup_linux.sh
+./linux/setup_linux.sh
+./linux/run_radar_linux.sh --help
+```
+
+#### Production Server Deployment
+```bash
+chmod +x linux/deploy_linux.sh
+sudo ./linux/deploy_linux.sh
+systemctl status radar-scraper.timer
+```
+
+**Features:**
+- ✅ Automated virtual environment setup
+- ✅ Systemd service integration (runs every 10 minutes)
+- ✅ Security hardening with dedicated user
+- ✅ Professional logging and monitoring
+- ✅ Works on Ubuntu, CentOS, Fedora
+
+📚 **See [Linux Setup Guide](info/LINUX_SETUP.md) for complete deployment instructions**
 
 ## 🔧 Configuration
 
@@ -198,10 +256,5 @@ This project is for educational and research purposes. Please respect the data s
 4. Push to branch (`git push origin feature/improvement`)
 5. Create Pull Request
 
-## 📞 Support
-
-For issues, questions, or contributions, please create an issue in the repository or contact the development team.
-
----
 
 **Kerala Radar Data Collection System** - Professional meteorological data automation for research and analysis.

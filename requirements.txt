@@ -1,2 +1,15 @@
-requests>=2.32.0
+# Kerala Radar Scraper - Python Dependencies
+#
+# Main dependencies for radar data collection system
+# Compatible with Python 3.8+
+
+# HTTP requests library for downloading radar images
+requests>=2.31.0
+
+# Note: Standard library modules used (no additional dependencies needed):
+# - datetime (UTC time handling)
+# - pathlib (file path operations)
+# - hashlib (SHA256 duplicate detection)
+# - argparse (command-line interface)
+# - json (MOSDAC timestamp storage)>=2.32.0
 schedule>=1.2.0

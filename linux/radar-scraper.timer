@@ -1,0 +1,12 @@
+[Unit]
+Description=Kerala Radar Scraper Timer
+Requires=radar-scraper.service
+
+[Timer]
+# Run every 10 minutes
+OnCalendar=*:0/10
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

@@ -340,6 +340,206 @@ def check_timestamp_with_flexibility(base_timestamp, tolerance_seconds=20):
     return False, None, None
 
 
+def smart_pattern_scan(current_time, target_hours, use_flexibility=True):
+    """
+    Smart pattern-based timestamp scanning for MOSDAC data.
+
+    Args:
+        current_time: Current datetime object
+        target_hours: List of hours to scan
+        use_flexibility: Whether to use flexible matching
+
+    Returns:
+        List of successful scan results
+    """
+    # Load known timestamps and generate candidates
+    known_timestamps, reference_timestamp = load_known_timestamps()
+
+    print(f"🧠 Using {len(known_timestamps)} known valid timestamps")
+    print(f"🔄 Reference: {reference_timestamp[:2]}:"
+          f"{reference_timestamp[2:4]}:{reference_timestamp[4:6]}")
+
+    # Generate adaptive timestamps for target hours
+    all_timestamps = generate_forward_timestamps_from_latest(
+        current_time, include_variants=True,
+        known_timestamps=known_timestamps,
+        reference_timestamp=reference_timestamp)
+
+    # Filter for target hours
+    target_timestamps = []
+    for hour in target_hours:
+        hour_timestamps = [ts for ts in all_timestamps if int(ts[:2]) == hour]
+        target_timestamps.extend(hour_timestamps)
+        print(f"   📅 Hour {hour:02d}: {len(hour_timestamps)} candidates")
+
+    print(f"🎯 Scanning {len(target_timestamps)} timestamps...")
+
+    scan_results = []
+    found_count = 0
+    consecutive_not_found = 0  # Track consecutive failures
+    max_consecutive_failures = 5  # Early exit threshold
+    # Copy existing known timestamps
+    new_valid_timestamps = list(known_timestamps)
+    latest_found_timestamp = reference_timestamp
+
+    for i, timestamp in enumerate(target_timestamps, 1):
+        time_str = f"{timestamp[:2]}:{timestamp[2:4]}:{timestamp[4:6]}"
+        print(f"  [{i:2d}/{len(target_timestamps)}] {time_str}...",
+              end=" ", flush=True)
+
+        if use_flexibility:
+            success, actual_timestamp, response = (
+                check_timestamp_with_flexibility(timestamp,
+                                                 tolerance_seconds=20))
+        else:
+            # Exact matching only
+            base_url = ("https://mosdac.gov.in/look/DWR/RCTLS/2025/28JUL/")
+            exact_url = (base_url +
+                         f"RCTLS_28JUL2025_{timestamp}_L2B_STD_MAXZ.gif")
+            try:
+                r = requests.get(exact_url, timeout=5)
+                if r.status_code == 200:
+                    success, actual_timestamp, response = True, timestamp, r
+                else:
+                    success, actual_timestamp, response = False, None, None
+            except Exception:
+                success, actual_timestamp, response = False, None, None
+
+        if success:
+            consecutive_not_found = 0  # Reset counter on success
+
+            if actual_timestamp == timestamp:
+                print("✅ Available (exact)")
+            else:
+                actual_time_str = (
+                    f"{actual_timestamp[:2]}:"
+                    f"{actual_timestamp[2:4]}:"
+                    f"{actual_timestamp[4:6]}"
+                )
+                print(f"✅ Available ({actual_time_str})")
+
+            # Add to new valid timestamps if not already known
+            if actual_timestamp not in new_valid_timestamps:
+                new_valid_timestamps.append(actual_timestamp)
+                print("    🆕 New timestamp added to knowledge base")
+
+            # Update latest found timestamp
+            actual_h = int(actual_timestamp[:2])
+            actual_m = int(actual_timestamp[2:4])
+            actual_s = int(actual_timestamp[4:6])
+            actual_total_sec = actual_h * 3600 + actual_m * 60 + actual_s
+
+            latest_h = int(latest_found_timestamp[:2])
+            latest_m = int(latest_found_timestamp[2:4])
+            latest_s = int(latest_found_timestamp[4:6])
+            latest_total_sec = latest_h * 3600 + latest_m * 60 + latest_s
+
+            if actual_total_sec > latest_total_sec:
+                old_ref = latest_found_timestamp
+                latest_found_timestamp = actual_timestamp
+                old_time = f"{old_ref[:2]}:{old_ref[2:4]}:{old_ref[4:6]}"
+                new_time = (f"{actual_timestamp[:2]}:"
+                            f"{actual_timestamp[2:4]}:"
+                            f"{actual_timestamp[4:6]}")
+                print(f"    📈 Reference updated: {old_time} → {new_time}")
+
+            scan_results.append({
+                'timestamp': actual_timestamp,
+                'time_str': (
+                    actual_time_str
+                    if actual_timestamp != timestamp
+                    else time_str
+                ),
+                'response': response,
+                'original_timestamp': timestamp,
+                'is_exact_match': actual_timestamp == timestamp
+            })
+            found_count += 1
+        else:
+            consecutive_not_found += 1
+            print("❌ Not found")
+
+            # Early exit if too many consecutive failures
+            if consecutive_not_found >= max_consecutive_failures:
+                remaining = len(target_timestamps) - i
+                print(f"\n⚠️  Early exit: {consecutive_not_found} consecutive "
+                      f"failures detected")
+                print(f"   Skipping {remaining} remaining timestamps")
+
+                # If no data found, adjust reference to most recent known
+                if found_count == 0 and new_valid_timestamps:
+                    # Find most recent known timestamp within reasonable time
+                    current_total_sec = (
+                        current_time.hour * 3600 +
+                        current_time.minute * 60 +
+                        current_time.second
+                    )
+
+                    # Sort known timestamps and find the most recent one
+                    # that's not too far in the future
+                    best_reference = None
+                    best_distance = float('inf')
+
+                    for known_ts in new_valid_timestamps:
+                        known_h = int(known_ts[:2])
+                        known_m = int(known_ts[2:4])
+                        known_s = int(known_ts[4:6])
+                        known_sec = known_h * 3600 + known_m * 60 + known_s
+
+                        # Calculate distance (prefer past timestamps)
+                        distance = abs(current_total_sec - known_sec)
+
+                        # Prefer timestamps in past but not too old
+                        if (known_sec <= current_total_sec and
+                                distance < best_distance and
+                                distance <= 7200):  # Within 2 hours
+                            best_distance = distance
+                            best_reference = known_ts
+
+                    ref_changed = (best_reference and
+                                   best_reference != reference_timestamp)
+                    if ref_changed:
+                        latest_found_timestamp = best_reference
+                        old_time = (f"{reference_timestamp[:2]}:"
+                                    f"{reference_timestamp[2:4]}:"
+                                    f"{reference_timestamp[4:6]}")
+                        new_time = (f"{best_reference[:2]}:"
+                                    f"{best_reference[2:4]}:"
+                                    f"{best_reference[4:6]}")
+                        print(f"   📍 Adjusting reference to known point: "
+                              f"{old_time} → {new_time}")
+                        print("   💡 This will improve next run's predictions")
+
+                break
+
+    # Save updated known timestamps and reference
+    timestamps_changed = new_valid_timestamps != known_timestamps
+    reference_changed = latest_found_timestamp != reference_timestamp
+
+    if timestamps_changed or reference_changed:
+        save_known_timestamps(new_valid_timestamps, latest_found_timestamp)
+        added_count = len(new_valid_timestamps) - len(known_timestamps)
+        if added_count > 0:
+            print(f"📊 Added {added_count} new timestamps to knowledge base")
+        if reference_changed:
+            old_time = (f"{reference_timestamp[:2]}:"
+                        f"{reference_timestamp[2:4]}:"
+                        f"{reference_timestamp[4:6]}")
+            new_time = (f"{latest_found_timestamp[:2]}:"
+                        f"{latest_found_timestamp[2:4]}:"
+                        f"{latest_found_timestamp[4:6]}")
+            print(f"📈 Final reference update: {old_time} → {new_time}")
+
+    if consecutive_not_found >= max_consecutive_failures:
+        print(f"\n📊 Smart Scan Results (Early Exit): {found_count}/"
+              f"{len(target_timestamps)} found")
+    else:
+        print(f"\n📊 Smart Scan Results: {found_count}/"
+              f"{len(target_timestamps)} found")
+
+    return scan_results
+
+
 def download_mosdac_only():
     """Download only MOSDAC data with adaptive reference updates."""
     print("🌦️  MOSDAC Radar Data Downloader")
