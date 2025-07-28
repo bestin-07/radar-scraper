@@ -6,12 +6,13 @@ Professional radar data scraper with multi-type support, automated scheduling,
 duplicate detection, and MOSDAC pattern analysis.
 
 Features:
-- Multi-type radar downloads (CAZ, PPZ, PPI, ZDR, VP2, 3DS)
+- Multi-type radar downloads (CAZ, PPZ, PPI, ZDR, VP2, 3DS, MAXZ)
 - SHA256-based duplicate detection
 - Flexible MOSDAC timestamp matching (imported from mosdac_only.py)
 - Reference-based pattern generation
 - UTC time handling for accuracy
 - Option to run with or without MOSDAC data collection
+- WMS-based high-resolution Max Z reflectivity (MAXZ)
 """
 
 import requests
@@ -45,17 +46,18 @@ def find_duplicate_image(image_data, save_directory):
     """
     new_hash = calculate_image_hash(image_data)
 
-    # Check all existing .gif files in the directory
-    for existing_file in save_directory.glob("*.gif"):
-        try:
-            with open(existing_file, "rb") as f:
-                existing_data = f.read()
-                existing_hash = calculate_image_hash(existing_data)
+    # Check all existing image files in the directory (both .gif and .png)
+    for existing_file in save_directory.glob("*"):
+        if existing_file.suffix.lower() in ['.gif', '.png']:
+            try:
+                with open(existing_file, "rb") as f:
+                    existing_data = f.read()
+                    existing_hash = calculate_image_hash(existing_data)
 
-                if new_hash == existing_hash:
-                    return existing_file
-        except Exception:
-            continue
+                    if new_hash == existing_hash:
+                        return existing_file
+            except Exception:
+                continue
 
     return None
 
@@ -85,9 +87,15 @@ def download_radar_type(radar_type, url, timestamp):
                 print(f"❌ {radar_type}: Got HTML instead of image")
                 return False, None
 
+            # Determine file extension based on radar type and content
+            if radar_type == 'maxz' or 'image/png' in content_type:
+                file_ext = "png"
+            else:
+                file_ext = "gif"
+
             # Save to appropriate directory
             radar_dir = radar_dirs[radar_type]
-            filename = radar_dir / f"{radar_type}_radar_{timestamp}.gif"
+            filename = radar_dir / f"{radar_type}_radar_{timestamp}.{file_ext}"
 
             # Check for duplicate images
             duplicate_file = find_duplicate_image(response.content, radar_dir)
@@ -102,6 +110,10 @@ def download_radar_type(radar_type, url, timestamp):
 
             print(f"✅ {radar_type}: Saved {filename}")
             print(f"   File size: {len(response.content)} bytes")
+
+            # Special note for maxz (WMS) type
+            if radar_type == 'maxz':
+                print(f"   📊 WMS Max Z Reflectivity (1024x1024 PNG)")
 
             return True, filename
         else:
@@ -132,7 +144,8 @@ def download_all_radar_types(include_mosdac=False):
         'ppi': Path("radar_images/ppi"),
         'zdr': Path("radar_images/zdr"),
         'vp2': Path("radar_images/vp2"),
-        '3ds': Path("radar_images/3ds")
+        '3ds': Path("radar_images/3ds"),
+        'maxz': Path("radar_images/maxz")  # New WMS-based Max Z reflectivity
     }
 
     # Create all directories
@@ -145,7 +158,7 @@ def download_all_radar_types(include_mosdac=False):
 
     print(f"🕐 Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')} UTC")
     print(f"📅 Using timestamp: {timestamp_str} (for local filenames)")
-    print(f"📁 Save directory: radar_images/")
+    print("📁 Save directory: radar_images/")
     print()
 
     # Radar type configurations - Static URLs (no timestamps)
@@ -155,7 +168,11 @@ def download_all_radar_types(include_mosdac=False):
         'ppi': "http://117.221.70.132/dwr/radar/images/ppi_koc.gif",
         'zdr': "http://117.221.70.132/dwr/radar/images/zdr_koc.gif",
         'vp2': "http://117.221.70.132/dwr/radar/images/vp2_koc.gif",
-        '3ds': "http://117.221.70.132/dwr/radar/images/3ds_koc.gif"
+        '3ds': "http://117.221.70.132/dwr/radar/images/3ds_koc.gif",
+        'maxz': ("http://117.221.70.132/geoserver/dwr_kochi/wms?"
+                 "service=WMS&request=GetMap&layers=dwr_kochi:maxz_image"
+                 "&styles=&format=image/png&transparent=true&version=1.1.1"
+                 "&width=1024&height=1024&srs=EPSG:4326&bbox=74.0,8.0,78.0,12.0")
     }
 
     # Download each radar type

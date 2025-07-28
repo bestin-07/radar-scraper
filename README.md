@@ -23,6 +23,7 @@ This professional-grade system automates the collection of multi-type radar data
 - **ZDR** - Differential Reflectivity
 - **VP2** - Vertical Profile 2
 - **3DS** - 3D Surface Analysis
+- **MAXZ** - Maximum Z Reflectivity (High-res WMS)
 
 ### 🤖 Automated Intelligence
 - **Smart Scheduling**: Hourly automated collection with custom intervals
@@ -50,7 +51,7 @@ run_radar.bat
 ```bash
 python radar_scraper.py
 ```
-*Downloads all 6 radar types immediately*
+*Downloads all 7 radar types immediately (including high-res MAXZ)*
 
 #### Automated Scheduler
 ```bash
@@ -89,6 +90,7 @@ Kerala SCRAPER/
 │   ├── zdr/                 # ZDR radar files
 │   ├── vp2/                 # VP2 radar files
 │   ├── 3ds/                 # 3DS radar files
+│   ├── maxz/                # MAXZ radar files (high-res WMS)
 │   └── kochi/               # MOSDAC historical data
 ├── info/                    # Documentation files
 │   ├── LINUX_SETUP.md      # Linux installation guide
@@ -162,9 +164,12 @@ RADAR_URLS = {
     'ppi': 'http://117.221.70.132/dwr/radar/images/ppi_koc.gif',
     'zdr': 'http://117.221.70.132/dwr/radar/images/zdr_koc.gif',
     'vp2': 'http://117.221.70.132/dwr/radar/images/vp2_koc.gif',
-    '3ds': 'http://117.221.70.132/dwr/radar/images/3ds_koc.gif'
+    '3ds': 'http://117.221.70.132/dwr/radar/images/3ds_koc.gif',
+    'maxz': 'http://117.221.70.132/geoserver/dwr_kochi/wms?...'  # WMS endpoint
 }
 ```
+
+**Note**: The MAXZ type uses a Web Map Service (WMS) endpoint providing high-resolution (1024x1024) PNG images with geographic precision.
 
 ### Scheduling Options
 - **Hourly**: `run_scheduler()` - Runs every hour on the hour
@@ -190,7 +195,7 @@ RADAR_URLS = {
 ```python
 from radar_scraper import download_all_radar_types
 results = download_all_radar_types()
-print(f"Downloaded {sum(r['success'] for r in results.values())}/6 radar types")
+print(f"Downloaded {sum(r['success'] for r in results.values())}/7 radar types")
 ```
 
 ### Custom Scheduling
