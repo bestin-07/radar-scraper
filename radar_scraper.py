@@ -14,7 +14,7 @@ Features:
 """
 
 import requests
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 import hashlib
 
@@ -72,7 +72,8 @@ def download_radar_type(radar_type, url, timestamp):
             # Check content type
             content_type = response.headers.get('content-type', '').lower()
 
-            if 'text/html' in content_type or response.content.startswith(b'<!DOCTYPE'):
+            if ('text/html' in content_type or
+                    response.content.startswith(b'<!DOCTYPE')):
                 print(f"❌ {radar_type}: Got HTML instead of image")
                 return False, None
 
@@ -83,7 +84,8 @@ def download_radar_type(radar_type, url, timestamp):
             # Check for duplicate images
             duplicate_file = find_duplicate_image(response.content, radar_dir)
             if duplicate_file:
-                print(f"🔄 {radar_type}: Identical image exists: {duplicate_file.name}")
+                print(f"🔄 {radar_type}: Identical image exists:")
+                print(f"   {duplicate_file.name}")
                 print("   Skipping duplicate save")
                 return True, duplicate_file
 
@@ -134,7 +136,8 @@ def download_all_radar_types():
         print("\n📁 Directory structure:")
         for radar_type in RADAR_URLS.keys():
             if results[radar_type]['success']:
-                print(f"   📂 {radar_type}/ - {radar_type.upper()} radar images")
+                print(f"   📂 {radar_type}/ - "
+                      f"{radar_type.upper()} radar images")
 
     return results
 
@@ -185,94 +188,111 @@ known_timestamps = [
 ]
 
 
-def generate_pattern_timestamps_from_reference(include_variants=True):
+def generate_forward_timestamps_from_latest(current_time,
+                                            include_variants=True):
     """
-    Generate all timestamps using 13:23:22 as the reference point.
-    Uses the precise 158s/761s alternating pattern with real-world corrections.
+    Generate timestamps going forward from the last known valid timestamp.
+    Uses the 158s/761s pattern to predict when new data should be available.
 
     Args:
+        current_time: Current datetime object
         include_variants: If True, include timing variants for better coverage
 
     Returns:
-        List of all generated timestamps in HHMMSS format
+        List of timestamps in HHMMSS format for recent/upcoming data
     """
-    # Reference point: 13:23:22 UTC (confirmed available data)
-    ref_timestamp = "132322"
-    ref_h, ref_m, ref_s = 13, 23, 22
+    # Last known valid timestamp: 15:25:41 (latest confirmed data)
+    ref_timestamp = "152541"
+    ref_h, ref_m, ref_s = 15, 25, 41
     ref_total_sec = ref_h * 3600 + ref_m * 60 + ref_s
 
-    # Fine-tuned intervals based on real data analysis:
-    # Observed: ~17s drift in longer intervals, precise short intervals
+    # Current time in seconds
+    current_total_sec = (
+        current_time.hour * 3600 +
+        current_time.minute * 60 +
+        current_time.second
+    )
+
+    print(f"🔄 Using reference: {ref_h:02d}:{ref_m:02d}:{ref_s:02d} "
+          f"(last known valid data)")
+    print(f"🕐 Current time: {current_time.hour:02d}:{current_time.minute:02d}:"
+          f"{current_time.second:02d}")
+    print("🎯 Generating timestamps forward from reference to current time")
+
+    # Fine-tuned intervals based on real data analysis
     intervals = {
-        'short_base': 158,      # Base short interval (very consistent)
-        'long_base': 761,       # Base long interval
-        'short_variants': [158, 157, 159],  # ±1s variation for short
-        'long_variants': [761, 744, 778]    # ±17s variation for long
+        'short_base': 158,      # ~2:38 minutes
+        'long_base': 761,       # ~12:41 minutes
+        'short_variants': [158, 157, 159],
+        'long_variants': [761, 744, 778]
     }
 
-    all_timestamps = [ref_timestamp]  # Include reference point
+    timestamps = [ref_timestamp]  # Start with the reference
 
-    def generate_sequence(start_sec, direction=1, max_iterations=50):
-        """Generate timestamps in forward (1) or backward (-1) direction."""
-        current_sec = start_sec
-        use_short = True if direction == 1 else False
-        generated = []
+    # Generate forward from reference point
+    current_check_sec = ref_total_sec
+    use_short = True  # Start with short interval after reference
+    iteration = 0
 
-        for i in range(max_iterations):
-            if use_short:
-                if include_variants:
-                    # Use base interval + occasional variants
-                    base_interval = intervals['short_base']
-                    variant_intervals = intervals['short_variants']
-                    # Use variant every 3rd iteration for realism
-                    if i % 3 == 2:
-                        interval = variant_intervals[i % len(variant_intervals)]
-                    else:
-                        interval = base_interval
-                else:
-                    interval = intervals['short_base']
+    while current_check_sec <= current_total_sec + 3600 and iteration < 100:
+        # Calculate next interval to add
+        if use_short:
+            if include_variants and iteration % 3 == 2:
+                variant_idx = iteration % len(intervals['short_variants'])
+                interval = intervals['short_variants'][variant_idx]
             else:
-                if include_variants:
-                    # Use base interval + occasional variants
-                    base_interval = intervals['long_base']
-                    variant_intervals = intervals['long_variants']
-                    # Use variant every 4th iteration to match observed pattern
-                    if i % 4 == 1:
-                        interval = variant_intervals[i % len(variant_intervals)]
-                    else:
-                        interval = base_interval
-                else:
-                    interval = intervals['long_base']
+                interval = intervals['short_base']
+        else:
+            if include_variants and iteration % 4 == 1:
+                variant_idx = iteration % len(intervals['long_variants'])
+                interval = intervals['long_variants'][variant_idx]
+            else:
+                interval = intervals['long_base']
 
-            current_sec += direction * interval
-            use_short = not use_short
+        # Move forward in time
+        current_check_sec += interval
+        use_short = not use_short
+        iteration += 1
 
-            # Skip if time goes out of bounds
-            if current_sec < 0 or current_sec >= 24 * 3600:
-                break
+        # Skip if time goes out of bounds
+        if current_check_sec >= 24 * 3600:
+            break
 
-            # Convert to timestamp
-            h = current_sec // 3600
-            m = (current_sec % 3600) // 60
-            s = current_sec % 60
-            timestamp = f"{h:02d}{m:02d}{s:02d}"
-            generated.append(timestamp)
+        # Convert to timestamp
+        h = current_check_sec // 3600
+        m = (current_check_sec % 3600) // 60
+        s = current_check_sec % 60
+        timestamp = f"{h:02d}{m:02d}{s:02d}"
+        timestamps.append(timestamp)
 
-            # Stop if we've gone too far
-            if h >= 20 or h <= 5:
-                break
+        # Stop if we've gone too far into the future
+        if current_check_sec > current_total_sec + 3600:
+            break
 
-        return generated
+    # Filter for timestamps that are >= current time - 2 hours
+    two_hours_ago = current_total_sec - 7200
+    recent_timestamps = []
 
-    # Generate FORWARD from reference point (starts with short interval)
-    forward_timestamps = generate_sequence(ref_total_sec, direction=1)
-    all_timestamps.extend(forward_timestamps)
+    for ts in timestamps:
+        ts_h = int(ts[:2])
+        ts_m = int(ts[2:4])
+        ts_s = int(ts[4:6])
+        ts_total_sec = ts_h * 3600 + ts_m * 60 + ts_s
 
-    # Generate BACKWARD from reference point (starts with long interval back)
-    backward_timestamps = generate_sequence(ref_total_sec, direction=-1)
-    all_timestamps.extend(backward_timestamps)
+        # Include if it's within the last 2 hours or future
+        if ts_total_sec >= two_hours_ago:
+            recent_timestamps.append(ts)
 
-    return sorted(list(set(all_timestamps)))
+    # Remove duplicates and sort
+    unique_timestamps = sorted(list(set(recent_timestamps)))
+
+    print(f"📅 Generated {len(unique_timestamps)} candidate timestamps")
+    if unique_timestamps:
+        print(f"🔍 Range: {unique_timestamps[0][:2]}:"
+              f"{unique_timestamps[0][2:4]} to "
+              f"{unique_timestamps[-1][:2]}:{unique_timestamps[-1][2:4]}")
+
+    return unique_timestamps
 
 
 def check_timestamp_with_flexibility(base_timestamp, tolerance_seconds=20):
@@ -284,7 +304,8 @@ def check_timestamp_with_flexibility(base_timestamp, tolerance_seconds=20):
         tolerance_seconds: How many seconds +/- to check around base
 
     Returns:
-        Tuple of (success, actual_timestamp, response) if found, else (False, None, None)
+        Tuple of (success, actual_timestamp, response) if found,
+        else (False, None, None)
     """
     h = int(base_timestamp[:2])
     m = int(base_timestamp[2:4])
@@ -323,7 +344,8 @@ def check_timestamp_with_flexibility(base_timestamp, tolerance_seconds=20):
         if candidate == base_timestamp:  # Skip exact match (already tried)
             continue
 
-        candidate_url = base_url + f"RCTLS_28JUL2025_{candidate}_L2B_STD_MAXZ.gif"
+        candidate_url = (base_url +
+                         f"RCTLS_28JUL2025_{candidate}_L2B_STD_MAXZ.gif")
         try:
             r = requests.get(candidate_url, timeout=5)
             if r.status_code == 200:
@@ -334,11 +356,12 @@ def check_timestamp_with_flexibility(base_timestamp, tolerance_seconds=20):
     return False, None, None
 
 
-def smart_pattern_scan(target_hours, use_flexibility=True):
+def smart_pattern_scan(current_time, target_hours, use_flexibility=True):
     """
     Intelligent scanning using reference-based generation with flexibility.
 
     Args:
+        current_time: Current datetime object for generating recent timestamps
         target_hours: List of hours to scan
         use_flexibility: Whether to use flexible timestamp matching
 
@@ -347,15 +370,17 @@ def smart_pattern_scan(target_hours, use_flexibility=True):
     """
     print("🔍 Smart Pattern Scan with Flexibility...")
 
-    # Generate all reference-based timestamps
-    all_timestamps = generate_pattern_timestamps_from_reference(include_variants=True)
+    # Generate timestamps for the last hour based on current time
+    all_timestamps = generate_forward_timestamps_from_latest(
+        current_time, include_variants=True)
 
     # Filter for target hours
     target_timestamps = []
     for hour in target_hours:
         hour_timestamps = [ts for ts in all_timestamps if int(ts[:2]) == hour]
         target_timestamps.extend(hour_timestamps)
-        print(f"   📅 Hour {hour:02d}: {len(hour_timestamps)} candidate timestamps")
+        print(f"   📅 Hour {hour:02d}: {len(hour_timestamps)} candidate "
+              f"timestamps")
 
     print(f"🎯 Scanning {len(target_timestamps)} reference-based timestamps...")
 
@@ -368,18 +393,24 @@ def smart_pattern_scan(target_hours, use_flexibility=True):
 
         if use_flexibility:
             # Use flexible matching with ±20s tolerance
-            success, actual_timestamp, response = check_timestamp_with_flexibility(timestamp, tolerance_seconds=20)
+            success, actual_timestamp, response = (
+                check_timestamp_with_flexibility(
+                    timestamp, tolerance_seconds=20))
 
             if success:
                 if actual_timestamp == timestamp:
                     print("✅ Available (exact)")
                 else:
-                    actual_time_str = f"{actual_timestamp[:2]}:{actual_timestamp[2:4]}:{actual_timestamp[4:6]}"
+                    actual_time_str = (f"{actual_timestamp[:2]}:"
+                                       f"{actual_timestamp[2:4]}:"
+                                       f"{actual_timestamp[4:6]}")
                     print(f"✅ Available ({actual_time_str})")
 
                 scan_results.append({
                     'timestamp': actual_timestamp,
-                    'time_str': actual_time_str if actual_timestamp != timestamp else time_str,
+                    'time_str': (actual_time_str
+                                 if actual_timestamp != timestamp
+                                 else time_str),
                     'response': response,
                     'original_timestamp': timestamp,
                     'is_exact_match': actual_timestamp == timestamp
@@ -409,7 +440,8 @@ def smart_pattern_scan(target_hours, use_flexibility=True):
             except Exception:
                 print("❌ Error")
 
-    print(f"\n📊 Smart Scan Results: {found_count}/{len(target_timestamps)} images found")
+    print(f"\n📊 Smart Scan Results: {found_count}/"
+          f"{len(target_timestamps)} images found")
     return scan_results
 
 
@@ -441,7 +473,7 @@ if __name__ == "__main__":
         print("🕐 Smart pattern generation with timing variants")
         print("📊 Checking entire last hour of data")
 
-        current_time = datetime.utcnow()  # Use UTC time explicitly
+        current_time = datetime.now(UTC)  # Use UTC time explicitly
 
         # Check entire last hour: both previous hour and current hour
         # This ensures we get complete coverage for the last 60 minutes
@@ -449,10 +481,12 @@ if __name__ == "__main__":
         target_hours = [previous_hour, current_time.hour]  # Check both hours
 
         print(f"🕐 Current UTC time: {current_time.strftime('%H:%M')} UTC")
-        print(f"🎯 Target: {previous_hour:02d}:xx and {current_time.hour:02d}:xx UTC (last hour coverage)")
+        print(f"🎯 Target: {previous_hour:02d}:xx and "
+              f"{current_time.hour:02d}:xx UTC (last hour coverage)")
 
         # Use smart pattern scanning with flexibility for both hours
-        quick_scan_results = smart_pattern_scan(target_hours, use_flexibility=True)
+        quick_scan_results = smart_pattern_scan(current_time, target_hours,
+                                                use_flexibility=True)
 
         if quick_scan_results:
             print("\n📋 Available times found:")
@@ -468,13 +502,15 @@ if __name__ == "__main__":
                     flexible_matches += 1
                 print(f"  🟢 {result['time_str']} ({match_type})")
 
-            print(f"\n📊 Match Summary: {exact_matches} exact, {flexible_matches} flexible")
+            print(f"\n📊 Match Summary: {exact_matches} exact, "
+                  f"{flexible_matches} flexible")
             print(f"📥 Downloading all {len(quick_scan_results)} images...")
 
             download_count = 0
 
             for i, result in enumerate(quick_scan_results, 1):
-                print(f"\n[{i}/{len(quick_scan_results)}] {result['time_str']}...")
+                print(f"\n[{i}/{len(quick_scan_results)}] "
+                      f"{result['time_str']}...")
 
                 # Create filename with actual timestamp found
                 ts = result['timestamp']
@@ -483,7 +519,8 @@ if __name__ == "__main__":
                 try:
                     r = result['response']
                     if r.status_code == 200:
-                        content_type = r.headers.get('content-type', '').lower()
+                        content_type = (r.headers.get('content-type', '')
+                                        .lower())
 
                         if ('text/html' in content_type or
                             r.content.startswith(b'<!DOCTYPE')):
@@ -491,9 +528,11 @@ if __name__ == "__main__":
                             continue
                         else:
                             # Check for duplicate images before saving
-                            duplicate_file = find_duplicate_image(r.content, save_dir)
+                            duplicate_file = find_duplicate_image(
+                                r.content, save_dir)
                             if duplicate_file:
-                                print(f"🔄 Duplicate exists: {duplicate_file.name}")
+                                print(f"🔄 Duplicate exists: "
+                                      f"{duplicate_file.name}")
                                 print("   Skipping duplicate save")
                                 continue
 
@@ -510,7 +549,8 @@ if __name__ == "__main__":
 
                             # Show match type for clarity
                             if not result.get('is_exact_match', True):
-                                orig_time = result.get('original_timestamp', '')
+                                orig_time = result.get(
+                                    'original_timestamp', '')
                                 orig_time_str = f"{orig_time[:2]}:{orig_time[2:4]}:{orig_time[4:6]}"
                                 print(f"   📍 Flexible match (target: {orig_time_str})")
 
