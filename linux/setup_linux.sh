@@ -59,22 +59,18 @@ chmod +x linux/run_radar_linux.sh
 
 # Create directories
 echo "📁 Creating radar image directories..."
-mkdir -p radar_images/{caz,ppz,ppi,zdr,vp2,3ds,kochi}
+mkdir -p radar_images/{caz,ppz,ppi,zdr,vp2,3ds,maxz}
 
 echo ""
 echo "✅ Setup completed successfully!"
 echo ""
 echo "🚀 How to run:"
 echo "   1. Activate virtual environment: source venv/bin/activate"
-echo "   2. Run the scraper:"
-echo "      - All radars: ./radar_scraper.py"
-echo "      - IMD only: ./radar_scraper.py --no-mosdac"
-echo "      - MOSDAC only: ./radar_scraper.py --mosdac-only"
+echo "   2. Run the scraper: ./radar_scraper.py"
 echo "   3. Or use the convenience script: ./linux/run_radar_linux.sh"
 echo ""
 echo "📁 Downloaded images will be saved to:"
-echo "   - IMD radars: radar_images/{caz,ppz,ppi,zdr,vp2,3ds}/"
-echo "   - MOSDAC: radar_images/kochi/"
+echo "   - Radar data: radar_images/{caz,ppz,ppi,zdr,vp2,3ds,maxz}/"
 echo ""
 echo "⏰ To run automatically, add to crontab:"
 echo "   # Run every 10 minutes"

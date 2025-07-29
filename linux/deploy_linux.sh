@@ -56,12 +56,12 @@ fi
 # Create installation directory
 echo "📁 Creating installation directory..."
 mkdir -p $INSTALL_DIR
-mkdir -p $INSTALL_DIR/radar_images/{caz,ppz,ppi,zdr,vp2,3ds,kochi}
+mkdir -p $INSTALL_DIR/radar_images/{caz,ppz,ppi,zdr,vp2,3ds,maxz}
 
 # Copy files to installation directory
 echo "📄 Copying application files..."
 cd "$PARENT_DIR"
-cp radar_scraper.py mosdac_only.py requirements.txt $INSTALL_DIR/
+cp radar_scraper.py requirements.txt $INSTALL_DIR/
 cp linux/run_radar_linux.sh $INSTALL_DIR/
 chmod +x $INSTALL_DIR/radar_scraper.py
 chmod +x $INSTALL_DIR/run_radar_linux.sh

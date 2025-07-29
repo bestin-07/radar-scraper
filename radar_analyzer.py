@@ -30,7 +30,7 @@ def analyze_radar_directory():
             continue
 
         radar_type = radar_dir.name
-        files = list(radar_dir.glob("*.gif"))
+        files = list(radar_dir.glob("*.gif")) + list(radar_dir.glob("*.png"))
 
         if not files:
             continue
@@ -51,7 +51,7 @@ def analyze_radar_directory():
     print(f"💾 Total storage used: {format_size(total_size)}")
     print(f"🎯 Radar types collected: {len(radar_types)}")
 
-    print(f"\n📋 Detailed Breakdown:")
+    print("\n📋 Detailed Breakdown:")
 
     for radar_type, data in radar_types.items():
         print(f"\n🔸 {radar_type.upper()} Radar:")
@@ -108,7 +108,7 @@ def show_latest_downloads():
         if not radar_dir.is_dir():
             continue
 
-        files = list(radar_dir.glob("*.gif"))
+        files = list(radar_dir.glob("*.gif")) + list(radar_dir.glob("*.png"))
         if files:
             latest = max(files, key=lambda x: x.stat().st_mtime)
             timestamp = format_timestamp(latest)
@@ -137,7 +137,7 @@ def cleanup_old_files(days_to_keep=7):
         if not radar_dir.is_dir():
             continue
 
-        files = list(radar_dir.glob("*.gif"))
+        files = list(radar_dir.glob("*.gif")) + list(radar_dir.glob("*.png"))
         old_files = [f for f in files if f.stat().st_mtime < cutoff_timestamp]
 
         if old_files:
@@ -151,11 +151,11 @@ def cleanup_old_files(days_to_keep=7):
                 total_removed += 1
 
     if total_removed > 0:
-        print(f"\n✅ Cleanup completed:")
+        print("\n✅ Cleanup completed:")
         print(f"   🗑️  Files removed: {total_removed}")
         print(f"   💾 Space freed: {format_size(total_size_freed)}")
     else:
-        print(f"\n✅ No old files found to remove")
+        print("\n✅ No old files found to remove")
 
 
 def main():

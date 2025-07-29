@@ -3,15 +3,13 @@
 Kerala Radar Data Collection System
 
 Professional radar data scraper with multi-type support, automated scheduling,
-duplicate detection, and MOSDAC pattern analysis.
+and duplicate detection.
 
 Features:
 - Multi-type radar downloads (CAZ, PPZ, PPI, ZDR, VP2, 3DS, MAXZ)
 - SHA256-based duplicate detection
-- Flexible MOSDAC timestamp matching (imported from mosdac_only.py)
 - Reference-based pattern generation
 - UTC time handling for accuracy
-- Option to run with or without MOSDAC data collection
 - WMS-based high-resolution Max Z reflectivity (MAXZ)
 """
 
@@ -19,13 +17,6 @@ import requests
 from datetime import datetime, UTC
 from pathlib import Path
 import hashlib
-import argparse
-
-# Import MOSDAC functions to avoid code duplication
-from mosdac_only import (
-    smart_pattern_scan,
-    download_mosdac_only
-)
 
 
 def calculate_image_hash(image_data):
@@ -113,7 +104,7 @@ def download_radar_type(radar_type, url, timestamp):
 
             # Special note for maxz (WMS) type
             if radar_type == 'maxz':
-                print(f"   📊 WMS Max Z Reflectivity (1024x1024 PNG)")
+                print("   📊 WMS Max Z Reflectivity (1024x1024 PNG)")
 
             return True, filename
         else:
@@ -125,13 +116,9 @@ def download_radar_type(radar_type, url, timestamp):
         return False, None
 
 
-def download_all_radar_types(include_mosdac=False):
+def download_all_radar_types():
     """
     Download all radar types for the most recent available timestamp.
-
-    Args:
-        include_mosdac: Whether to include MOSDAC data collection
-                       (default: False)
     """
     print("🌦️  Kerala Radar Data Collection System")
     print("=" * 50)
@@ -172,7 +159,8 @@ def download_all_radar_types(include_mosdac=False):
         'maxz': ("http://117.221.70.132/geoserver/dwr_kochi/wms?"
                  "service=WMS&request=GetMap&layers=dwr_kochi:maxz_image"
                  "&styles=&format=image/png&transparent=true&version=1.1.1"
-                 "&width=1024&height=1024&srs=EPSG:4326&bbox=74.0,8.0,78.0,12.0")
+                 "&width=1024&height=1024&srs=EPSG:4326"
+                 "&bbox=74.0,8.0,78.0,12.0")
     }
 
     # Download each radar type
@@ -195,157 +183,11 @@ def download_all_radar_types(include_mosdac=False):
 
     print("\n🏁 Multi-radar download session completed!")
 
-    # MOSDAC data collection (optional)
-    if include_mosdac:
-        print("\n" + "=" * 50)
-        print("🔬 Running MOSDAC Data Collection...")
-        print("📅 Using adaptive timestamp matching with 2-hour window...")
-        print("🕐 Smart pattern generation with timing variants")
-        print("📊 Checking entire last two hours of data")
-
-        current_time = datetime.now(UTC)  # Use UTC time explicitly
-
-        # Check entire last two hours: current hour + previous 2 hours
-        # This ensures we get complete coverage for the last 120 minutes
-        current_hour = current_time.hour
-        previous_hour = current_hour - 1 if current_hour > 0 else 23
-        two_hours_ago = (current_hour - 2 if current_hour >= 2
-                         else (24 + current_hour - 2))
-        target_hours = [two_hours_ago, previous_hour, current_hour]
-
-        print(f"🕐 Current UTC time: {current_time.strftime('%H:%M')} UTC")
-        print(f"🎯 Target: {two_hours_ago:02d}:xx, {previous_hour:02d}:xx and "
-              f"{current_hour:02d}:xx UTC (last two hours coverage)")
-
-        # Use smart pattern scanning with flexibility for all hours
-        quick_scan_results = smart_pattern_scan(current_time, target_hours,
-                                                use_flexibility=True)
-
-        if quick_scan_results:
-            print("\n📋 Available MOSDAC times found:")
-            exact_matches = 0
-            flexible_matches = 0
-
-            for result in quick_scan_results:
-                timestamp = result['timestamp']
-                time_str = result['time_str']
-                is_exact = result.get('is_exact_match', True)
-
-                if is_exact:
-                    print(f"   ✅ {time_str} (exact)")
-                    exact_matches += 1
-                else:
-                    print(f"   🔄 {time_str} (flexible)")
-                    flexible_matches += 1
-
-            print(f"\n📊 Found {len(quick_scan_results)} available times:")
-            print(f"   🎯 Exact matches: {exact_matches}")
-            print(f"   🔄 Flexible matches: {flexible_matches}")
-
-            # Download all found MOSDAC images
-            download_count = 0
-            save_dir = Path("radar_images/kochi")
-            save_dir.mkdir(parents=True, exist_ok=True)
-
-            print(f"\n📥 Downloading {len(quick_scan_results)} MOSDAC images...")
-
-            for i, result in enumerate(quick_scan_results, 1):
-                print(f"[{i}/{len(quick_scan_results)}] {result['time_str']}...",
-                      end=" ", flush=True)
-
-                ts = result['timestamp']
-                filename = save_dir / f"kochi_radar_mosdac_{ts}.gif"
-
-                try:
-                    r = result['response']
-                    if r.status_code == 200:
-                        content_type = (
-                            r.headers.get('content-type', '').lower()
-                        )
-
-                        if ('text/html' in content_type or
-                                r.content.startswith(b'<!DOCTYPE')):
-                            print("❌ HTML response")
-                            continue
-
-                        # Check for duplicates
-                        duplicate_file = find_duplicate_image(r.content,
-                                                              save_dir)
-                        if duplicate_file:
-                            print(f"🔄 Duplicate ({duplicate_file.name})")
-                            continue
-
-                        # Save image
-                        with open(filename, "wb") as f:
-                            f.write(r.content)
-
-                        size_kb = len(r.content) / 1024
-                        print(f"✅ Saved ({size_kb:.1f} KB)")
-
-                        if not result.get('is_exact_match', True):
-                            orig_time = result.get('original_timestamp', ts)
-                            if orig_time != ts:
-                                orig_time_str = (f"{orig_time[:2]}:"
-                                                 f"{orig_time[2:4]}:"
-                                                 f"{orig_time[4:6]}")
-                                print(f"   📍 Flexible match "
-                                      f"(target: {orig_time_str})")
-
-                        download_count += 1
-                    else:
-                        print(f"❌ HTTP {r.status_code}")
-                except Exception as e:
-                    print(f"❌ Error: {e}")
-
-            print(f"\n🎉 Success: {download_count}/"
-                  f"{len(quick_scan_results)} MOSDAC images")
-            if flexible_matches > 0:
-                print(f"🔧 Flexibility helped find {flexible_matches} "
-                      "additional images!")
-
-        else:
-            print("\n❌ No MOSDAC radar data found in target time range")
-
-        print(f"\n📁 Check the 'radar_images/kochi/' folder for "
-              "MOSDAC downloads")
-    else:
-        print("\n📊 MOSDAC data collection disabled "
-              "(use --mosdac flag to enable)")
-
 
 def main():
-    """Main function with command-line argument support."""
-    parser = argparse.ArgumentParser(
-        description="Kerala Radar Data Collection System"
-    )
-    parser.add_argument(
-        '--mosdac',
-        action='store_true',
-        help='Include MOSDAC data collection (default: disabled)'
-    )
-    parser.add_argument(
-        '--no-mosdac',
-        action='store_true',
-        help='Skip MOSDAC data collection (legacy option, now default)'
-    )
-    parser.add_argument(
-        '--mosdac-only',
-        action='store_true',
-        help='Only run MOSDAC data collection (skip IMD radar types)'
-    )
-
-    args = parser.parse_args()
-
-    if args.mosdac_only:
-        # Run only MOSDAC collection
-        print("🌦️  MOSDAC-Only Data Collection")
-        print("=" * 50)
-        download_mosdac_only()
-    else:
-        # Run multi-radar collection with optional MOSDAC
-        # MOSDAC is now disabled by default, enabled with --mosdac flag
-        include_mosdac_data = args.mosdac and not args.no_mosdac
-        download_all_radar_types(include_mosdac=include_mosdac_data)
+    """Main function for Kerala Radar Data Collection System."""
+    # Run multi-radar collection
+    download_all_radar_types()
 
 
 if __name__ == "__main__":

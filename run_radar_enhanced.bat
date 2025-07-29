@@ -32,16 +32,15 @@ echo ===============================================
 echo            AVAILABLE OPTIONS
 echo ===============================================
 echo.
-echo 1. Download ALL radar types (6 types: CAZ, PPZ, PPI, ZDR, VP2, 3DS)
-echo 2. Download MOSDAC data only (Kochi radar with pattern matching)
-echo 3. Start hourly automated scheduler (all types)
-echo 4. Start 30-minute automated scheduler (all types)
-echo 5. Run flake8 code quality check
-echo 6. Install/Update requirements
-echo 7. Exit
+echo 1. Download all radar types (CAZ, PPZ, PPI, ZDR, VP2, 3DS, MAXZ)
+echo 2. Start hourly automated scheduler
+echo 3. Start 30-minute automated scheduler
+echo 4. Run flake8 code quality check
+echo 5. Install/Update requirements
+echo 6. Exit
 echo.
 echo ===============================================
-set /p choice="Enter your choice (1-7): "
+set /p choice="Enter your choice (1-6): "
 
 if "%choice%"=="1" (
     echo.
@@ -49,8 +48,7 @@ if "%choice%"=="1" (
     echo         DOWNLOADING ALL RADAR TYPES
     echo ===============================================
     echo [INFO] Starting comprehensive radar download...
-    echo [INFO] This will download 6 types: CAZ, PPZ, PPI, ZDR, VP2, 3DS
-    echo [INFO] Plus MOSDAC pattern-matched data
+    echo [INFO] This will download 7 types: CAZ, PPZ, PPI, ZDR, VP2, 3DS, MAXZ
     echo.
     %PYTHON_CMD% radar_scraper.py
     echo.
@@ -58,20 +56,6 @@ if "%choice%"=="1" (
     pause
     goto start
 ) else if "%choice%"=="2" (
-    echo.
-    echo ===============================================
-    echo         DOWNLOADING MOSDAC DATA ONLY
-    echo ===============================================
-    echo [INFO] Starting MOSDAC-only download...
-    echo [INFO] Using smart pattern matching for Kochi radar
-    echo [INFO] Checking last hour with flexible timestamp matching
-    echo.
-    %PYTHON_CMD% mosdac_only.py
-    echo.
-    echo [DONE] MOSDAC download completed!
-    pause
-    goto start
-) else if "%choice%"=="3" (
     echo.
     echo ===============================================
     echo         STARTING HOURLY SCHEDULER
@@ -82,7 +66,7 @@ if "%choice%"=="1" (
     echo.
     %PYTHON_CMD% radar_scheduler.py
     goto start
-) else if "%choice%"=="4" (
+) else if "%choice%"=="3" (
     echo.
     echo ===============================================
     echo       STARTING 30-MINUTE SCHEDULER
@@ -93,7 +77,7 @@ if "%choice%"=="1" (
     echo.
     %PYTHON_CMD% -c "from radar_scheduler import run_custom_interval; run_custom_interval(30)"
     goto start
-) else if "%choice%"=="5" (
+) else if "%choice%"=="4" (
     echo.
     echo ===============================================
     echo         RUNNING CODE QUALITY CHECK
@@ -106,7 +90,7 @@ if "%choice%"=="1" (
     echo [DONE] Code quality check completed!
     pause
     goto start
-) else if "%choice%"=="6" (
+) else if "%choice%"=="5" (
     echo.
     echo ===============================================
     echo       INSTALLING/UPDATING REQUIREMENTS
@@ -119,7 +103,7 @@ if "%choice%"=="1" (
     echo [DONE] Requirements installation completed!
     pause
     goto start
-) else if "%choice%"=="7" (
+) else if "%choice%"=="6" (
     echo.
     echo ===============================================
     echo [INFO] Thank you for using Kerala Radar System!
@@ -131,7 +115,7 @@ if "%choice%"=="1" (
     echo.
     echo ===============================================
     echo [ERROR] Invalid choice entered: "%choice%"
-    echo [INFO] Please enter a number between 1-7
+    echo [INFO] Please enter a number between 1-6
     echo ===============================================
     pause
     goto start

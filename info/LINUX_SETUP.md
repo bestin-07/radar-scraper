@@ -63,7 +63,7 @@ chmod +x radar_scraper.py
 chmod +x run_radar_linux.sh
 
 # Create image directories
-mkdir -p radar_images/{caz,ppz,ppi,zdr,vp2,3ds,kochi}
+mkdir -p radar_images/{caz,ppz,ppi,zdr,vp2,3ds,maxz}
 ```
 
 ## Usage
@@ -73,19 +73,15 @@ mkdir -p radar_images/{caz,ppz,ppi,zdr,vp2,3ds,kochi}
 # Activate virtual environment
 source venv/bin/activate
 
-# Run with different options
-./radar_scraper.py                 # IMD radars only (default)
-./radar_scraper.py --mosdac        # IMD radars + MOSDAC data
-./radar_scraper.py --mosdac-only   # MOSDAC only
+# Run radar scraper
+./radar_scraper.py                 # All radar types
 ./radar_scraper.py --help          # Show help
 ```
 
 ### Option 2: Convenience Script
 ```bash
 # Use the runner script (handles venv automatically)
-./run_radar_linux.sh               # IMD radars only (default)
-./run_radar_linux.sh --mosdac      # IMD + MOSDAC data
-./run_radar_linux.sh --mosdac-only # MOSDAC only
+./run_radar_linux.sh               # All radar types
 ```
 
 ## Automation with Cron
@@ -107,8 +103,8 @@ crontab -e
 # Run hourly at 5 minutes past the hour (IMD only - faster)
 5 * * * * cd /path/to/radar-scraper && ./run_radar_linux.sh
 
-# Run every 2 hours with MOSDAC data
-0 */2 * * * cd /path/to/radar-scraper && ./run_radar_linux.sh --mosdac
+# Run every 2 hours
+0 */2 * * * cd /path/to/radar-scraper && ./run_radar_linux.sh
 ```
 
 ## File Locations
@@ -124,10 +120,8 @@ radar-scraper/
 │   ├── zdr/                      # ZDR radar images
 │   ├── vp2/                      # VP2 radar images
 │   ├── 3ds/                      # 3DS radar images
-│   └── kochi/                    # MOSDAC radar images
-├── known_timestamps.json         # MOSDAC timestamp cache
+│   └── maxz/                     # MAXZ radar images
 ├── radar_scraper.py              # Main scraper script
-├── mosdac_only.py                # MOSDAC functions
 ├── setup_linux.sh               # Setup script
 ├── run_radar_linux.sh           # Convenience runner
 └── requirements.txt              # Python dependencies
@@ -162,7 +156,6 @@ pip install requests
 ```bash
 # Test connectivity
 curl -I http://117.221.70.132/dwr/radar/images/caz_koc.gif
-wget --spider https://mosdac.gov.in/
 
 # Check if behind firewall/proxy
 export http_proxy=http://proxy:port
@@ -181,7 +174,7 @@ tail -f radar_scraper.log
 ## Performance Notes
 
 - **Disk Space**: Each radar image is ~40-60KB. Plan accordingly for long-term storage.
-- **Bandwidth**: Script downloads 6 IMD images + variable MOSDAC images per run.
+- **Bandwidth**: Script downloads 7 radar images per run.
 - **CPU Usage**: Minimal - mostly I/O bound operations.
 - **Memory Usage**: Very low - typically under 50MB.
 

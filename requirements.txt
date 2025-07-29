@@ -11,5 +11,5 @@ requests>=2.31.0
 # - pathlib (file path operations)
 # - hashlib (SHA256 duplicate detection)
 # - argparse (command-line interface)
-# - json (MOSDAC timestamp storage)>=2.32.0
+# - json (configuration and caching)
 schedule>=1.2.0

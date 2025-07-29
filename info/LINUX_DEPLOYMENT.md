@@ -4,7 +4,8 @@
 
 ### 1. For Development/Testing
 ```bash
-# Make setup script executable
+# Make setup scr# Test IMD connectivity
+curl -I http://117.221.70.132/dwr/radar/images/caz_koc.gifxecutable
 chmod +x setup_linux.sh
 
 # Run automated setup
@@ -46,13 +47,10 @@ sudo ./deploy_linux.sh
 ```bash
 # Activate environment and run
 source venv/bin/activate
-./radar_scraper.py                 # All radars
-./radar_scraper.py --no-mosdac     # IMD only
-./radar_scraper.py --mosdac-only   # MOSDAC only
+./radar_scraper.py                 # All radar types
 
 # Or use convenience script
-./run_radar_linux.sh               # All radars
-./run_radar_linux.sh --no-mosdac   # IMD only
+./run_radar_linux.sh               # All radar types
 ```
 
 ### Systemd Service Management
@@ -133,8 +131,8 @@ pip install -r requirements.txt
 # Test IMD radar connectivity
 curl -I http://117.221.70.132/dwr/radar/images/caz_koc.gif
 
-# Test MOSDAC connectivity
-curl -I https://mosdac.gov.in/
+# Test MAXZ radar connectivity (WMS endpoint)
+curl -I "http://117.221.70.132/geoserver/dwr_kochi/wms"
 
 # Check for proxy/firewall issues
 export http_proxy=http://proxy:port   # if behind proxy
@@ -159,7 +157,6 @@ sudo systemctl status radar-scraper.service -l
 radar-scraper/
 ├── 🐍 Python Files
 │   ├── radar_scraper.py          # Main application
-│   ├── mosdac_only.py            # MOSDAC functions
 │   └── requirements.txt          # Dependencies
 ├── 🐧 Linux Scripts
 │   ├── setup_linux.sh            # Development setup
@@ -172,15 +169,14 @@ radar-scraper/
 │   ├── LINUX_SETUP.md           # Detailed Linux guide
 │   └── README.md                 # General readme
 └── 📊 Data
-    ├── radar_images/             # Downloaded images
-    │   ├── caz/                 # CAZ radar images
-    │   ├── ppz/                 # PPZ radar images
-    │   ├── ppi/                 # PPI radar images
-    │   ├── zdr/                 # ZDR radar images
-    │   ├── vp2/                 # VP2 radar images
-    │   ├── 3ds/                 # 3DS radar images
-    │   └── kochi/               # MOSDAC images
-    └── known_timestamps.json    # MOSDAC cache
+    └── radar_images/             # Downloaded images
+        ├── caz/                 # CAZ radar images
+        ├── ppz/                 # PPZ radar images
+        ├── ppi/                 # PPI radar images
+        ├── zdr/                 # ZDR radar images
+        ├── vp2/                 # VP2 radar images
+        ├── 3ds/                 # 3DS radar images
+        └── maxz/                # MAXZ radar images
 ```
 
 ## 🔒 Security Features (Production Deployment)
@@ -196,14 +192,14 @@ radar-scraper/
 - **CPU Usage**: Minimal (I/O bound operations)
 - **Memory Usage**: ~50MB peak
 - **Disk Usage**: ~40-60KB per radar image
-- **Network**: ~6MB download per 10-minute cycle (IMD + MOSDAC)
+- **Network**: ~5MB download per 10-minute cycle
 - **Storage Growth**: ~864MB per day (all radars, 10-minute intervals)
 
 ## 🚨 Production Considerations
 
 1. **Disk Space**: Monitor `/opt/radar-scraper/radar_images/` growth
 2. **Log Rotation**: Systemd handles automatic log rotation
-3. **Backup**: Consider backing up `known_timestamps.json`
+3. **Backup**: Consider backing up radar image directories
 4. **Monitoring**: Set up alerts for service failures
 5. **Updates**: Stop timer before updating scripts
 

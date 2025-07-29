@@ -24,19 +24,12 @@ fi
 echo "🔄 Activating virtual environment..."
 source venv/bin/activate
 
-# Check if mosdac_only.py exists
-if [ ! -f "mosdac_only.py" ]; then
-    echo "❌ mosdac_only.py not found!"
-    echo "   Make sure all files are in the correct directory."
-    exit 1
-fi
-
-# Run the radar scraper with any passed arguments
+# Run the radar scraper
 echo "🚀 Starting radar scraper..."
-echo "   Command: python3 radar_scraper.py $@"
+echo "   Command: python3 radar_scraper.py"
 echo ""
 
-python3 radar_scraper.py "$@"
+python3 radar_scraper.py
 
 echo ""
 echo "✅ Radar scraper completed!"

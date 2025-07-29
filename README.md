@@ -1,18 +1,10 @@
 # Kerala Radar Data Collection System
 
-A comprehensive P## 📚 Documentation
-
-### Main Documentation
-- **README.md** - This file: Main system overview and usage guide
-
-### Detailed Documentation (in [`info/`](info/) folder)
-- **[Linux Setup Guide](info/LINUX_SETUP.md)** - Complete Linux installation and configuration
-- **[Linux Deployment Guide](info/LINUX_DEPLOYMENT.md)** - Production server deployment instructions
-- **[Linux README](info/LINUX_README.md)** - Linux-specific documentation and scriptssystem for automated meteorological radar data collection and analysis from Kerala weather monitoring stations.
+A comprehensive automated system for meteorological radar data collection and analysis from Kerala weather monitoring stations.
 
 ## 🎯 Overview
 
-This professional-grade system automates the collection of multi-type radar data from Kerala meteorological sources, featuring intelligent duplicate detection, flexible scheduling, and advanced pattern analysis capabilities.
+This professional-grade system automates the collection of multi-type radar data from Kerala meteorological sources, featuring intelligent duplicate detection, flexible scheduling, and comprehensive analysis capabilities.
 
 ## ✨ Key Features
 
@@ -28,20 +20,20 @@ This professional-grade system automates the collection of multi-type radar data
 ### 🤖 Automated Intelligence
 - **Smart Scheduling**: Hourly automated collection with custom intervals
 - **Duplicate Detection**: SHA256-based image comparison prevents redundant downloads
-- **Pattern Recognition**: MOSDAC timestamp analysis with ±20s flexibility
+- **Multi-Format Support**: Both GIF and PNG radar images
 - **UTC Time Sync**: Precise timing alignment for meteorological accuracy
 
 ### 🗂️ Professional Organization
 - **Structured Storage**: Organized directory hierarchy by radar type
 - **Timestamped Files**: Consistent naming convention (YYYYMMDD_HHMM)
 - **Error Handling**: Robust retry logic and comprehensive logging
-- **Legacy Compatibility**: Backward compatible with existing data structures
+- **Cross-Platform**: Windows and Linux deployment support
 
 ## 🚀 Quick Start
 
 ### Option 1: Interactive Menu
 ```bash
-run_radar.bat
+run_radar_enhanced.bat
 ```
 *Windows batch file with user-friendly menu options*
 
@@ -51,7 +43,7 @@ run_radar.bat
 ```bash
 python radar_scraper.py
 ```
-*Downloads all 7 radar types immediately (including high-res MAXZ)*
+*Downloads all 7 radar types immediately*
 
 #### Automated Scheduler
 ```bash
@@ -65,7 +57,7 @@ python radar_analyzer.py
 ```
 *Analyzes collected data and provides insights*
 
-## � Documentation
+## 📚 Documentation
 
 ### Main Documentation
 - **README.md** - This file: Main system overview and usage guide
@@ -73,38 +65,31 @@ python radar_analyzer.py
 ### Detailed Documentation (in [`info/`](info/) folder)
 - **[Linux Setup Guide](info/LINUX_SETUP.md)** - Complete Linux installation and configuration
 - **[Linux Deployment Guide](info/LINUX_DEPLOYMENT.md)** - Production server deployment instructions
-- **[Linux README](info/LINUX_README.md)** - Linux-specific documentation and scripts
-- **[MOSDAC Configuration](info/MOSDAC_DISABLED.md)** - MOSDAC system changes and usage options
-- **[Code Organization](info/ORGANIZATION_SUMMARY.md)** - Project structure and refactoring details
-- **[Merge Summary](info/MERGE_SUMMARY.md)** - Code consolidation and cleanup history
 
-## �📁 Directory Structure
+## 📁 Directory Structure
 
 ```
 Kerala SCRAPER/
 ├── radar_images/
 │   ├── caz/                 # CAZ radar files
-│   │   └── caz_radar_20250728_1500.gif
+│   │   └── caz_radar_20250729_1400.gif
 │   ├── ppz/                 # PPZ radar files
 │   ├── ppi/                 # PPI radar files
 │   ├── zdr/                 # ZDR radar files
 │   ├── vp2/                 # VP2 radar files
 │   ├── 3ds/                 # 3DS radar files
-│   ├── maxz/                # MAXZ radar files (high-res WMS)
-│   └── kochi/               # MOSDAC historical data
+│   └── maxz/                # MAXZ radar files (high-res PNG)
 ├── info/                    # Documentation files
 │   ├── LINUX_SETUP.md      # Linux installation guide
-│   ├── LINUX_DEPLOYMENT.md # Production deployment
-│   └── LINUX_README.md     # Linux-specific docs
+│   └── LINUX_DEPLOYMENT.md # Production deployment
 ├── linux/                  # Linux deployment files
 │   ├── setup_linux.sh      # Development setup
 │   ├── deploy_linux.sh     # Production deployment
 │   ├── run_radar_linux.sh  # Convenience runner
 │   └── *.service, *.timer  # Systemd files
-├── radar_scraper.py         # Main collection engine (refactored)
+├── radar_scraper.py         # Main collection engine
 ├── radar_scheduler.py       # Automation scheduler
 ├── radar_analyzer.py        # Data analysis tools
-├── mosdac_only.py          # MOSDAC functions module
 ├── requirements.txt         # Python dependencies
 └── README.md               # This documentation
 ```
@@ -178,11 +163,10 @@ RADAR_URLS = {
 
 ## 📊 Advanced Features
 
-### MOSDAC Pattern Analysis
-- **Reference-Based Generation**: Uses 13:23:22 UTC as anchor point
-- **Interval Patterns**: 158s/761s alternating cycles with variants
-- **Flexible Matching**: ±20 second tolerance for real-world timing
-- **Complete Coverage**: Scans entire last hour for comprehensive data
+### Intelligent Data Collection
+- **Multi-Format Support**: GIF and PNG format handling
+- **Timestamp Precision**: UTC-based naming with meteorological accuracy
+- **Professional Monitoring**: Comprehensive logging and error handling
 
 ### Duplicate Prevention
 - **SHA256 Hashing**: Cryptographic comparison of image content
@@ -225,14 +209,14 @@ analyze_radar_directory()  # Comprehensive data report
 🔄 ppz: Identical image exists: ppz_radar_20250728_1445.gif
    Skipping duplicate save
 
-📊 Download Summary:
-   ✅ Successful: 5/6
-   📁 Saved to: radar_images
+� Downloading MAXZ radar (high-res PNG)...
+✅ maxz: Saved radar_images\maxz\maxz_radar_20250728_1500.png
+   File size: 187,432 bytes
 
-🔬 Running MOSDAC Hourly Analysis...
-🎯 Target: 14:xx and 15:xx UTC (last hour coverage)
-📊 Smart Scan Results: 8/16 images found
-🎉 Success: 8/8 MOSDAC images
+📊 Download Summary:
+   ✅ Successful: 6/7 radar types
+   � Saved to: radar_images
+   🎯 Collection complete
 ```
 
 ## 🛠️ Troubleshooting
