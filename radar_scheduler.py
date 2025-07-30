@@ -15,7 +15,8 @@ from radar_scraper import download_all_radar_types
 def scheduled_radar_download():
     """Run the radar download and log the results"""
     print(f"\n{'='*60}")
-    print(f"🕐 Scheduled radar download at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"🕐 Scheduled radar download at {timestamp}")
     print(f"{'='*60}")
 
     try:
@@ -31,8 +32,8 @@ def scheduled_radar_download():
             print(f"⚠️  Downloaded {success_count}/{total_count} radar types")
 
             # Show which ones failed
-            failed_types = [radar_type for radar_type, result in results.items()
-                          if not result['success']]
+            failed_types = [radar_type for radar_type, result in
+                            results.items() if not result['success']]
             if failed_types:
                 print(f"   ❌ Failed: {', '.join(failed_types)}")
 
@@ -46,7 +47,7 @@ def run_scheduler():
     """Run the scheduler with hourly downloads"""
     print("🚀 Kerala Radar Scheduler Starting...")
     print("⏰ Scheduled to run every hour on the hour")
-    print("📊 Will download 6 radar types: CAZ, PPZ, PPI, ZDR, VP2, 3DS")
+    print("📊 Will download 7 radar types: CAZ, PPZ, PPI, ZDR, VP2, 3DS, MAXZ")
     print("\nPress Ctrl+C to stop the scheduler\n")
 
     # Schedule downloads every hour at the start of the hour
@@ -68,9 +69,9 @@ def run_scheduler():
 
 def run_custom_interval(minutes=60):
     """Run with a custom interval in minutes"""
-    print(f"🚀 Kerala Radar Scheduler Starting...")
+    print("🚀 Kerala Radar Scheduler Starting...")
     print(f"⏰ Scheduled to run every {minutes} minutes")
-    print("📊 Will download 6 radar types: CAZ, PPZ, PPI, ZDR, VP2, 3DS")
+    print("📊 Will download 7 radar types: CAZ, PPZ, PPI, ZDR, VP2, 3DS, MAXZ")
     print("\nPress Ctrl+C to stop the scheduler\n")
 
     # Schedule downloads every specified minutes
